@@ -29,7 +29,8 @@ beforeEach(async function() {
 
   for (let user of sampleUsers) {
     await db.query(
-      `INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      `INSERT INTO users(username, first_name, last_name, email, phone, password, admin)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       user
     );
     tokens[user[0]] = createToken(user[0], user[6]);
@@ -161,7 +162,7 @@ describe("PATCH /users/[username]", function() {
     const response = await request(app)
       .patch("/users/u1")
       .send({ _token: tokens.u1, admin: true });
-    expect(response.statusCode).toBe(401);
+    expect(response.statusCode).toBe(400);
   });
 
   test("should return 404 if cannot find", async function() {
@@ -181,7 +182,7 @@ describe("DELETE /users/[username]", function() {
   test("should deny access if not admin", async function() {
     const response = await request(app)
       .delete("/users/u1")
-      .send({ _token: tokens.u1 });
+      .send({ _token: tokens.u2 });
     expect(response.statusCode).toBe(401);
   });
 

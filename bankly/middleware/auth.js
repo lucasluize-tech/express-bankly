@@ -51,8 +51,9 @@ function authUser(req, res, next) {
       let payload = jwt.decode(token);
       req.curr_username = payload.username;
       req.curr_admin = payload.admin;
+      return next();
     }
-    return next();
+    throw new ExpressError("unauthorized",401)
   } catch (err) {
     err.status = 401;
     return next(err);

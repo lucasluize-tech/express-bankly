@@ -4,6 +4,8 @@ const User = require('../models/user');
 const express = require('express');
 const router = express.Router();
 const createTokenForUser = require('../helpers/createToken');
+const jsonschema = require("jsonschema");
+const newUserSchema = require('../schemas/userNew.json')
 
 
 /** Register user; return token.
@@ -12,12 +14,18 @@ const createTokenForUser = require('../helpers/createToken');
  *
  *  Returns {token: jwt-token-string}.
  *
- *  If incorrect username/password given, should raise 401.
+ *  If incorrect username/password given, should raise 401 (WRONG SHOULD BE 400)
  *
  */
 
 router.post('/register', async function(req, res, next) {
   try {
+    // ADDED VALIDATION
+    const validator = jsonschema.validate(req.body, newUserSchema)
+    if (!validator.valid){
+      const err = validator.errors.map(e => e.stack)
+      throw new ExpressError(err, 400)
+    }
     const { username, password, first_name, last_name, email, phone } = req.body;
     let user = await User.register({username, password, first_name, last_name, email, phone});
     const token = createTokenForUser(username, user.admin);

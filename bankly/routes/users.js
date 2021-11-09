@@ -5,6 +5,9 @@ const express = require('express');
 const router = new express.Router();
 const ExpressError = require('../helpers/expressError');
 const { authUser, requireLogin, requireAdmin } = require('../middleware/auth');
+const jsonschema = require("jsonschema");
+const userUpdateSchema = require('../schemas/userUpdate.json')
+
 
 /** GET /
  *
@@ -35,11 +38,7 @@ router.get('/', authUser, requireLogin, async function(req, res, next) {
  *
  */
 
-router.get('/:username', authUser, requireLogin, async function(
-  req,
-  res,
-  next
-) {
+router.get('/:username', authUser, requireLogin, async function(req,res,next) {
   try {
     let user = await User.get(req.params.username);
     return res.json({ user });
@@ -63,16 +62,18 @@ router.get('/:username', authUser, requireLogin, async function(
  *
  */
 
-router.patch('/:username', authUser, requireLogin, requireAdmin, async function(
-  req,
-  res,
-  next
-) {
+router.patch('/:username', authUser, requireLogin, async function(req,res,next) {
   try {
     if (!req.curr_admin && req.curr_username !== req.params.username) {
       throw new ExpressError('Only  that user or admin can edit a user.', 401);
     }
-
+    const validator = jsonschema.validate(req.body, userUpdateSchema)
+    
+    if (!validator.valid){
+      const errs = validator.errors.map(e => e.stack);
+      throw new ExpressError(errs, 400)
+    }
+    // ADDING VALIDATION HERE :
     // get fields to change; remove token so we don't try to change it
     let fields = { ...req.body };
     delete fields._token;
@@ -94,12 +95,12 @@ router.patch('/:username', authUser, requireLogin, requireAdmin, async function(
  * If user cannot be found, return a 404 err.
  */
 
-router.delete('/:username', authUser, requireAdmin, async function(
-  req,
-  res,
-  next
-) {
+router.delete('/:username', authUser, requireLogin, async function(req,res,next) {
   try {
+    if (!req.curr_admin && req.curr_username !== req.params.username) {
+      throw new ExpressError('Only  that user or admin can edit a user.', 401);
+    }
+    
     User.delete(req.params.username);
     return res.json({ message: 'deleted' });
   } catch (err) {
